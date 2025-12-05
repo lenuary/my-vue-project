@@ -36,3 +36,5 @@ npm run dev
 ```sh
 npm run build
 ```
+run Front-end at http://localhost:5173
+run Back-end at http://localhost:5000
