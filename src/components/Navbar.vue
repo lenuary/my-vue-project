@@ -1,6 +1,12 @@
 <script setup>
-    import { RouterLink } from 'vue-router';
+    import { RouterLink, useRoute } from 'vue-router';
     import logo from '@/assets/logo.png'
+
+    const isActiveLink = (routePath) => {
+      const route = useRoute();
+      return route.path === routePath;
+    }
+
 </script>
 
 <template>
@@ -22,15 +28,15 @@
               <div class="flex space-x-2">
                 <router-link
                   to="/"
-                  class="text-white bg-green-900 hover:bg-gray-900 hover:text-white rounded-md px-3 py-2"
-                  >Home</router-link>>
+                  :class="[isActiveLink('/') ? 'bg-green-900' : 'hover:bg-gray-900 hover:text-white','text-white','px-3','py-2','rounded-md']"
+                  >Home</router-link>
                 <router-link
                   to="/jobs"
-                  class="text-white hover:bg-green-900 hover:text-white rounded-md px-3 py-2"
+                  :class="[isActiveLink('/jobs') ? 'bg-green-900' : 'hover:bg-gray-900 hover:text-white','text-white','px-3','py-2','rounded-md']"
                   >Jobs</router-link>
                 <router-link
                   to="/jobs/add"
-                  class="text-white hover:bg-green-900 hover:text-white rounded-md px-3 py-2"
+                  :class="[isActiveLink('/jobs/add') ? 'bg-green-900' : 'hover:bg-gray-900 hover:text-white','text-white','px-3','py-2','rounded-md']"
                   >Add Job</router-link>
               </div>
             </div>
