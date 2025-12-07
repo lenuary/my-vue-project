@@ -1,13 +1,15 @@
 <script setup>
 import router from "@/router";
 import { reactive, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
-import axios from "axios";
+import { useJobsStore } from "@/stores/jobs";
 
 const route = useRoute();
-
 const jobId = route.params.id;
+
+const store = useJobsStore();
+const toast = useToast();
 
 const form = reactive({
   type: "Full-Time",
@@ -22,13 +24,6 @@ const form = reactive({
     contactPhone: "",
   },
 });
-
-const state = reactive({
-  job: {},
-  isLoading: true,
-});
-
-const toast = useToast();
 
 const handleSubmit = async () => {
   const updatedJob = {
@@ -46,32 +41,34 @@ const handleSubmit = async () => {
   };
 
   try {
-    const response = await axios.put(`/api/jobs/${jobId}`, updatedJob);
-    toast.success("Job Updated Succesfully");
-    router.push(`/jobs/${response.data.id}`);
+    const response = await store.updateJob(jobId, updatedJob);
+
+    toast.success("Job Updated Successfully");
+    router.push(`/jobs/${response.id}`);
   } catch (error) {
-    console.error("Error fetching job", error);
-    toast.error("Jobs Was Not Edited");
+    console.error("Error updating job", error);
+    toast.error("Job Was Not Edited");
   }
 };
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`/api/jobs/${jobId}`);
-    state.job = response.data;
-    form.type = state.job.type;
-    form.title = state.job.title;
-    form.description = state.job.description;
-    form.salary = state.job.salary;
-    form.location = state.job.location;
-    form.company.name = state.job.company.name;
-    form.company.description = state.job.company.description;
-    form.company.contactEmail = state.job.company.contactEmail;
-    form.company.contactPhone = state.job.company.contactPhone;
+    await store.fetchJob(jobId);
+
+    const job = store.state.job;
+
+    form.type = job.type;
+    form.title = job.title;
+    form.description = job.description;
+    form.salary = job.salary;
+    form.location = job.location;
+    form.company.name = job.company.name;
+    form.company.description = job.company.description;
+    form.company.contactEmail = job.company.contactEmail;
+    form.company.contactPhone = job.company.contactPhone;
   } catch (error) {
     console.error("Error fetching job", error);
-  } finally {
-    state.isLoading = false;
+    toast.error("Could not load job details");
   }
 });
 </script>
