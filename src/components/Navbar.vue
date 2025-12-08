@@ -48,6 +48,21 @@ const isActiveLink = (routePath) => {
                 ]"
                 >Jobs</router-link
               >
+
+              <router-link
+                to="/favorites"
+                :class="[
+                  isActiveLink('/favorites')
+                    ? 'bg-green-900'
+                    : 'hover:bg-gray-900 hover:text-white',
+                  'text-white',
+                  'px-3',
+                  'py-2',
+                  'rounded-md',
+                ]"
+                >Favorites</router-link
+              >
+
               <router-link
                 to="/jobs/add"
                 :class="[
