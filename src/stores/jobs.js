@@ -4,7 +4,7 @@ import { reactive, watch } from "vue";
 export const useJobsStore = defineStore("jobs", () => {
   const state = reactive({
     jobs: [],
-    job: {},
+    job: null,
     isLoading: false,
     favorites: [],
   });
@@ -42,7 +42,7 @@ export const useJobsStore = defineStore("jobs", () => {
 
       const mappedApiJobs = apiJobsList.map((apiJob) => {
         return {
-          id: apiJob._id || Math.random().toString(36).substr(2, 9),
+          id: String(apiJob._id) || Math.random().toString(36).substr(2, 9),
           title: apiJob.title || "No Title",
           type: apiJob.type || "Full-Time",
           location: apiJob.locationAddress || "Remote",
@@ -73,10 +73,26 @@ export const useJobsStore = defineStore("jobs", () => {
 
   const fetchJob = async (id) => {
     state.isLoading = true;
-    setTimeout(() => {
-      state.job = state.jobs.find((j) => j.id === id) || {};
+    state.job = null;
+
+    try {
+      if (state.jobs.length === 0) {
+        await fetchJobs();
+      }
+
+      const foundJob = state.jobs.find((j) => String(j.id) === String(id));
+
+      if (foundJob) {
+        state.job = foundJob;
+      } else {
+        state.job = null;
+      }
+    } catch (error) {
+      console.error("Error fetching single job:", error);
+      state.job = null;
+    } finally {
       state.isLoading = false;
-    }, 100);
+    }
   };
 
   const addJob = async (newJob) => {

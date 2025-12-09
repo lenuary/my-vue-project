@@ -1,74 +1,79 @@
 <script setup>
-import router from "@/router";
-import { reactive, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useJobsStore } from "@/stores/jobs";
+import { useForm } from "vee-validate";
+import * as yup from "yup";
 
 const route = useRoute();
+const router = useRouter();
 const jobId = route.params.id;
 
 const store = useJobsStore();
 const toast = useToast();
 
-const form = reactive({
-  type: "Full-Time",
-  title: "",
-  description: "",
-  salary: "",
-  location: "",
-  company: {
-    name: "",
-    description: "",
-    contactEmail: "",
-    contactPhone: "",
-  },
+const isLoading = ref(true);
+
+const schema = yup.object({
+  type: yup.string().required("Job Type is required"),
+  title: yup
+    .string()
+    .required("Job Title is required")
+    .min(3, "Job Title must be at least 3 characters"),
+  description: yup.string().required("Description is required"),
+  salary: yup.string().required("Salary is required"),
+  location: yup.string().required("Location is required"),
+  company: yup.object({
+    name: yup.string().required("Company Name is required"),
+    description: yup.string().required("Company Description is required"),
+    contactEmail: yup
+      .string()
+      .email("Must be a valid email")
+      .required("Contact Email is required"),
+    contactPhone: yup.string(),
+  }),
 });
 
-const handleSubmit = async () => {
-  const updatedJob = {
-    title: form.title,
-    type: form.type,
-    location: form.location,
-    description: form.description,
-    salary: form.salary,
-    company: {
-      name: form.company.name,
-      description: form.company.description,
-      contactEmail: form.company.contactEmail,
-      contactPhone: form.company.contactPhone,
-    },
-  };
+const { defineField, handleSubmit, setValues, errors, isSubmitting } = useForm({
+  validationSchema: schema,
+});
 
-  try {
-    const response = await store.updateJob(jobId, updatedJob);
+const [type, typeAttrs] = defineField("type");
+const [title, titleAttrs] = defineField("title");
+const [description, descriptionAttrs] = defineField("description");
+const [salary, salaryAttrs] = defineField("salary");
+const [location, locationAttrs] = defineField("location");
 
-    toast.success("Job Updated Successfully");
-    router.push(`/jobs/${response.id}`);
-  } catch (error) {
-    console.error("Error updating job", error);
-    toast.error("Job Was Not Edited");
-  }
-};
+const [companyName, companyNameAttrs] = defineField("company.name");
+const [companyDesc, companyDescAttrs] = defineField("company.description");
+const [companyEmail, companyEmailAttrs] = defineField("company.contactEmail");
+const [companyPhone, companyPhoneAttrs] = defineField("company.contactPhone");
 
 onMounted(async () => {
   try {
+    isLoading.value = true;
     await store.fetchJob(jobId);
 
-    const job = store.state.job;
-
-    form.type = job.type;
-    form.title = job.title;
-    form.description = job.description;
-    form.salary = job.salary;
-    form.location = job.location;
-    form.company.name = job.company.name;
-    form.company.description = job.company.description;
-    form.company.contactEmail = job.company.contactEmail;
-    form.company.contactPhone = job.company.contactPhone;
+    setValues(store.state.job);
   } catch (error) {
     console.error("Error fetching job", error);
-    toast.error("Could not load job details");
+    toast.error("Failed to retrieve offer data");
+    router.push("/jobs");
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    const response = await store.updateJob(jobId, values);
+
+    toast.success("Offer updated successfully");
+    router.push(`/jobs/${response.id}`);
+  } catch (error) {
+    console.error("Error updating job", error);
+    toast.error("Failed to edit the offer");
   }
 });
 </script>
@@ -79,7 +84,11 @@ onMounted(async () => {
       <div
         class="bg-white px-6 py-8 mb-4 shadow-md rounded-md border m-4 md:m-0"
       >
-        <form @submit.prevent="handleSubmit">
+        <div v-if="isLoading" class="text-center py-10">
+          <span class="text-gray-500 text-xl">Loading offer data...</span>
+        </div>
+
+        <form v-else @submit="onSubmit">
           <h2 class="text-3xl text-center font-semibold mb-6">Edit Job</h2>
 
           <div class="mb-4">
@@ -87,17 +96,19 @@ onMounted(async () => {
               >Job Type</label
             >
             <select
-              v-model="form.type"
+              v-model="type"
+              v-bind="typeAttrs"
               id="type"
               name="type"
               class="border rounded w-full py-2 px-3"
-              required
+              :class="{ 'border-red-500': errors.type }"
             >
               <option value="Full-Time">Full-Time</option>
               <option value="Part-Time">Part-Time</option>
               <option value="Remote">Remote</option>
               <option value="Internship">Internship</option>
             </select>
+            <span class="text-red-500 text-sm">{{ errors.type }}</span>
           </div>
 
           <div class="mb-4">
@@ -106,38 +117,45 @@ onMounted(async () => {
             >
             <input
               type="text"
-              v-model="form.title"
+              v-model="title"
+              v-bind="titleAttrs"
               id="name"
               name="name"
               class="border rounded w-full py-2 px-3 mb-2"
+              :class="{ 'border-red-500': errors.title }"
               placeholder="eg. Beautiful Apartment In Miami"
-              required
             />
+            <span class="text-red-500 text-sm">{{ errors.title }}</span>
           </div>
+
           <div class="mb-4">
             <label for="description" class="block text-gray-700 font-bold mb-2"
               >Description</label
             >
             <textarea
               id="description"
-              v-model="form.description"
+              v-model="description"
+              v-bind="descriptionAttrs"
               name="description"
               class="border rounded w-full py-2 px-3"
+              :class="{ 'border-red-500': errors.description }"
               rows="4"
               placeholder="Add any job duties, expectations, requirements, etc"
             ></textarea>
+            <span class="text-red-500 text-sm">{{ errors.description }}</span>
           </div>
 
           <div class="mb-4">
-            <label for="type" class="block text-gray-700 font-bold mb-2"
+            <label for="salary" class="block text-gray-700 font-bold mb-2"
               >Salary</label
             >
             <select
               id="salary"
-              v-model="form.salary"
+              v-model="salary"
+              v-bind="salaryAttrs"
               name="salary"
               class="border rounded w-full py-2 px-3"
-              required
+              :class="{ 'border-red-500': errors.salary }"
             >
               <option value="Under $50K">under $50K</option>
               <option value="$50K - $60K">$50 - $60K</option>
@@ -151,19 +169,22 @@ onMounted(async () => {
               <option value="$175K - $200K">$175 - $200K</option>
               <option value="Over $200K">Over $200K</option>
             </select>
+            <span class="text-red-500 text-sm">{{ errors.salary }}</span>
           </div>
 
           <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2"> Location </label>
+            <label class="block text-gray-700 font-bold mb-2">Location</label>
             <input
               type="text"
-              v-model="form.location"
+              v-model="location"
+              v-bind="locationAttrs"
               id="location"
               name="location"
               class="border rounded w-full py-2 px-3 mb-2"
+              :class="{ 'border-red-500': errors.location }"
               placeholder="Company Location"
-              required
             />
+            <span class="text-red-500 text-sm">{{ errors.location }}</span>
           </div>
 
           <h3 class="text-2xl mb-5">Company Info</h3>
@@ -174,12 +195,17 @@ onMounted(async () => {
             >
             <input
               type="text"
-              v-model="form.company.name"
+              v-model="companyName"
+              v-bind="companyNameAttrs"
               id="company"
               name="company"
               class="border rounded w-full py-2 px-3"
+              :class="{ 'border-red-500': errors['company.name'] }"
               placeholder="Company Name"
             />
+            <span class="text-red-500 text-sm">{{
+              errors["company.name"]
+            }}</span>
           </div>
 
           <div class="mb-4">
@@ -190,12 +216,17 @@ onMounted(async () => {
             >
             <textarea
               id="company_description"
-              v-model="form.company.description"
+              v-model="companyDesc"
+              v-bind="companyDescAttrs"
               name="company_description"
               class="border rounded w-full py-2 px-3"
+              :class="{ 'border-red-500': errors['company.description'] }"
               rows="4"
               placeholder="What does your company do?"
             ></textarea>
+            <span class="text-red-500 text-sm">{{
+              errors["company.description"]
+            }}</span>
           </div>
 
           <div class="mb-4">
@@ -206,14 +237,19 @@ onMounted(async () => {
             >
             <input
               type="email"
-              v-model="form.company.contactEmail"
+              v-model="companyEmail"
+              v-bind="companyEmailAttrs"
               id="contact_email"
               name="contact_email"
               class="border rounded w-full py-2 px-3"
+              :class="{ 'border-red-500': errors['company.contactEmail'] }"
               placeholder="Email address for applicants"
-              required
             />
+            <span class="text-red-500 text-sm">{{
+              errors["company.contactEmail"]
+            }}</span>
           </div>
+
           <div class="mb-4">
             <label
               for="contact_phone"
@@ -222,7 +258,8 @@ onMounted(async () => {
             >
             <input
               type="tel"
-              v-model="form.company.contactPhone"
+              v-model="companyPhone"
+              v-bind="companyPhoneAttrs"
               id="contact_phone"
               name="contact_phone"
               class="border rounded w-full py-2 px-3"
@@ -232,10 +269,11 @@ onMounted(async () => {
 
           <div>
             <button
-              class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline"
+              class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline disabled:opacity-50"
               type="submit"
+              :disabled="isSubmitting"
             >
-              Update Job
+              {{ isSubmitting ? "Updating..." : "Update Job" }}
             </button>
           </div>
         </form>

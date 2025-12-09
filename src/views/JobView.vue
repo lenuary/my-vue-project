@@ -2,7 +2,7 @@
 import PulseLoader from "vue-spinner/src/PulseLoader.vue";
 import BackButton from "@/components/BackButton.vue";
 import { onMounted, computed } from "vue";
-import { useRoute, RouterLink, useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useJobsStore } from "@/stores/jobs";
 
@@ -37,9 +37,17 @@ onMounted(async () => {
 <template>
   <BackButton />
 
-  <section v-if="!store.state.isLoading && job" class="bg-green-50">
+  <section class="bg-green-50 min-h-screen">
     <div class="container m-auto py-10 px-6">
-      <div class="grid grid-cols-1 md:grid-cols-70/30 w-full gap-6">
+      <div v-if="store.state.isLoading" class="text-center text-gray-500 py-6">
+        <PulseLoader />
+      </div>
+
+      <div v-else-if="!job" class="text-center py-10">
+        <p class="text-xl text-gray-500 font-bold">Job not found</p>
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-70/30 w-full gap-6">
         <main>
           <div
             class="bg-white p-6 rounded-lg shadow-md text-center md:text-left"
@@ -100,8 +108,4 @@ onMounted(async () => {
       </div>
     </div>
   </section>
-
-  <div v-else class="text-center text-gray-500 py-6">
-    <PulseLoader />
-  </div>
 </template>
